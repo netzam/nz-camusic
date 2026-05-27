@@ -1,0 +1,84 @@
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+  color: #f5f7ff;
+}
+
+.subtitle {
+  opacity: 0.85;
+}
+
+.controls,
+.recording-controls,
+.telemetry {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+button,
+select,
+a {
+  border: 1px solid #5b6df8;
+  background: #1d2348;
+  color: #f5f7ff;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.performance-canvas {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 12px;
+  border: 2px solid #35408d;
+  background: #05070f;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.instrument-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pill {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.pill.idle {
+  background: #2a2a2a;
+}
+
+.pill.loading {
+  background: #8a6400;
+}
+
+.pill.ready {
+  background: #106b32;
+}
+
+.pill.error {
+  background: #8a1f1f;
+}
+
+.status {
+  font-weight: 600;
+}
