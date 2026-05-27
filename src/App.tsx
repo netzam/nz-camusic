@@ -84,6 +84,7 @@ export default function App() {
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment')
   const [audioEnabled, setAudioEnabled] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
 
   const instrument = useMemo(
     () => instruments.find((it) => it.id === selectedInstrument) ?? instruments[0],
@@ -100,6 +101,13 @@ export default function App() {
 
   const enableAudio = async () => {
     try {
+      const navWithAudioSession = navigator as Navigator & {
+        audioSession?: { type: 'auto' | 'playback' | 'ambient' | 'play-and-record' }
+      }
+      if (navWithAudioSession.audioSession) {
+        navWithAudioSession.audioSession.type = 'playback'
+      }
+
       const ctx = ensureAudioContext()
       if (ctx.state !== 'running') {
         await ctx.resume()
@@ -111,6 +119,27 @@ export default function App() {
       console.error(error)
       setStatus('Failed to enable audio')
     }
+  }
+
+  const disableAudio = async () => {
+    try {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+        await audioCtxRef.current.suspend()
+      }
+      setAudioEnabled(false)
+      setStatus('Audio disabled')
+    } catch (error) {
+      console.error(error)
+      setStatus('Failed to disable audio')
+    }
+  }
+
+  const toggleAudio = async () => {
+    if (audioEnabled) {
+      await disableAudio()
+      return
+    }
+    await enableAudio()
   }
 
   const preloadInstrument = async (instrumentId: InstrumentId) => {
@@ -192,24 +221,44 @@ export default function App() {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
+      setCameraActive(true)
       setPermissionState('granted')
       setStatus(`Camera active (${facingMode === 'user' ? 'front' : 'back'})`)
     } catch (error) {
       console.error(error)
+      setCameraActive(false)
       setPermissionState('denied')
       setStatus('Camera access denied')
     }
   }
 
+  const toggleCamera = async () => {
+    if (cameraActive) {
+      stopCamera()
+      return
+    }
+    await startCamera()
+  }
+
   const switchCamera = async () => {
     const nextMode = cameraFacingMode === 'environment' ? 'user' : 'environment'
     setCameraFacingMode(nextMode)
+    if (!cameraActive) {
+      setStatus(`Camera mode set to ${nextMode === 'user' ? 'front' : 'back'}`)
+      return
+    }
     await startCamera(nextMode)
   }
 
   const stopCamera = () => {
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
     mediaStreamRef.current = null
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    setCameraActive(false)
+    setPermissionState('idle')
+    setStatus('Camera stopped')
   }
 
   useEffect(() => {
@@ -385,14 +434,14 @@ export default function App() {
       <p className="subtitle">Move a bright light in front of camera to control pitch and volume.</p>
 
       <section className="controls">
-        <button onClick={() => void startCamera()} disabled={permissionState === 'requesting'}>
-          {permissionState === 'granted' ? 'Restart Camera' : 'Start Camera'}
+        <button onClick={() => void toggleCamera()} disabled={permissionState === 'requesting'}>
+          {cameraActive ? 'Stop Camera' : 'Start Camera'}
         </button>
-        <button onClick={() => void switchCamera()} disabled={permissionState !== 'granted'}>
+        <button onClick={() => void switchCamera()}>
           Switch to {cameraFacingMode === 'environment' ? 'Front' : 'Back'} Camera
         </button>
-        <button onClick={() => void enableAudio()} disabled={audioEnabled}>
-          {audioEnabled ? 'Audio Enabled' : 'Enable Audio'}
+        <button onClick={() => void toggleAudio()}>
+          {audioEnabled ? 'Disable Audio' : 'Enable Audio'}
         </button>
 
         <label>
@@ -419,7 +468,7 @@ export default function App() {
       </section>
 
       <section className="recording-controls">
-        <button onClick={startRecording} disabled={isRecording || permissionState !== 'granted'}>
+        <button onClick={startRecording} disabled={isRecording || !cameraActive}>
           Record
         </button>
         <button onClick={stopRecording} disabled={!isRecording}>
