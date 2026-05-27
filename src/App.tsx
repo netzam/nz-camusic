@@ -21,6 +21,25 @@ function mapYToVolume(y: number): number {
   return Math.max(0.05, Math.min(1, 1 - y))
 }
 
+function drawVideoFrame(
+  ctx: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  width: number,
+  height: number,
+  mirror: boolean,
+) {
+  if (!mirror) {
+    ctx.drawImage(video, 0, 0, width, height)
+    return
+  }
+
+  ctx.save()
+  ctx.translate(width, 0)
+  ctx.scale(-1, 1)
+  ctx.drawImage(video, 0, 0, width, height)
+  ctx.restore()
+}
+
 async function fetchAndDecodeAudio(
   audioContext: AudioContext,
   url: string,
@@ -217,8 +236,9 @@ export default function App() {
         hiddenCanvas.width = 160
         hiddenCanvas.height = 90
 
-        outputCtx.drawImage(video, 0, 0, outputCanvas.width, outputCanvas.height)
-        hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height)
+        const shouldMirror = cameraFacingMode === 'user'
+        drawVideoFrame(outputCtx, video, outputCanvas.width, outputCanvas.height, shouldMirror)
+        drawVideoFrame(hiddenCtx, video, hiddenCanvas.width, hiddenCanvas.height, shouldMirror)
 
         const frame = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height)
         const { data, width, height } = frame
@@ -296,7 +316,7 @@ export default function App() {
     return () => {
       if (animationFrameRef.current) window.cancelAnimationFrame(animationFrameRef.current)
     }
-  }, [instrument.label, instrumentStates, selectedInstrument, buffers, audioEnabled])
+  }, [instrument.label, instrumentStates, selectedInstrument, buffers, audioEnabled, cameraFacingMode])
 
   const startRecording = async () => {
     const canvas = canvasRef.current
